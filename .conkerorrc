@@ -1,0 +1,144 @@
+download_buffer_automatic_open_target = OPEN_NEW_BUFFER;
+// options: OPEN_NEW_BUFFER_BACKGROUND | OPEN_CURRENT_BUFFER | OPEN_NEW_BUFFER
+
+require("favicon");
+require("new-tabs.js");
+tab_bar_show_icon = true;
+tab_bar_show_index = false;
+read_buffer_show_icons = true;
+
+// indicate you are using Firefox
+session_pref("general.useragent.compatMode.firefox", true);
+
+// disable scroll bars
+function disable_scrollbars (buffer) {
+    buffer.top_frame.scrollbars.visible = false;
+}
+//add_hook("create_buffer_late_hook", disable_scrollbars);
+
+// auto open auto saved session, if you want to reload the last saved session
+//require("session.js");
+//session_auto_save_auto_load = false;
+
+// load favourites manually - opens urls together, yay!
+// option, but opens new window: load_url_in_current_buffer
+
+// open url in new buffers
+url_remoting_fn = load_url_in_new_buffer;
+// default: load_url_in_new_window
+
+// startup urls, opens left to right but Conkeror flips it if you set new_buffer_position = 0
+// load_url_in_new_buffer("https://groups.google.com/forum/?fromgroups=#!myforums");
+//load_url_in_new_buffer("g+");
+//load_url_in_new_buffer("https://gmail.com");
+//load_url_in_new_buffer("https://inbox.google.com/u/0/?pli=1");
+
+// seems Conkeror default home page always opens after conkerorrc is done
+// Home page opens after all rc actions are taken, and is thus in focus at load time
+// plus the Home key will take you here as well: make it plus.google.com... for now
+homepage = "hn" // actual url picked up from webjump set below 
+
+// these commands affect position of new buffers to be opened, 
+// the default home page usually opens as right most tab, this makes it left most... plus all new tabs as well
+// this also reverses order of urls open above
+//new_buffer_position = 0; // effective after rc finishes. Opens ALL new buffers at the top of the buffer list (ie leftmost in the tabs)
+//new_buffer_with_opener_position = buffer_position_after; // doesn't seem to do much, or is the default behaviour
+// bury_buffer_position = buffer_position_end; // clears the buffer order, in some way...
+
+
+// direct switch to buffers - works, M-1, M-2, etc to switch buffers
+function define_switch_buffer_key (key, buf_num) {
+    define_key(default_global_keymap, key,
+               function (I) {
+                   switch_to_buffer(I.window,
+                                    I.window.buffers.get_buffer(buf_num));
+               });
+};
+for (let i = 0; i < 10; ++i) {
+    define_switch_buffer_key("M-"+String((i+1)%10), i);
+};
+
+// relative switch of buffers
+// just use the default M-p and M-n
+//define_key(content_buffer_normal_keymap, "f7", "buffer-previous");
+//define_key(content_buffer_normal_keymap, "f8", "buffer-next");
+
+// relative move of buffers
+define_key(content_buffer_normal_keymap, "f7", "buffer-move-backward");
+define_key(content_buffer_normal_keymap, "f8", "buffer-move-forward");
+
+// show bookmarks with g (webjumps do by default); true is the default setting
+// setting to false will remove bookmarks from g url completions
+url_completion_use_bookmarks = true;
+
+// if you want history to show with g, set to true, false is the default setting
+url_completion_use_history = false;
+
+// if you want webjumps to show with g, true is the default setting
+url_completion_use_webjumps = true;
+
+// setup history, h and H, don't show webjumps and bookmarks with history
+define_browser_object_class(
+    "history-url", null, 
+    function (I, prompt) {
+        check_buffer (I.buffer, content_buffer);
+        var result = yield I.buffer.window.minibuffer.read_url(
+            $prompt = prompt,  $use_webjumps = false, $use_history = true, $use_bookmarks = false);
+        yield co_return (result);
+    });
+
+interactive("find-url-from-history",
+            "Find a page from history in the current buffer",
+            "find-url",
+            $browser_object = browser_object_history_url);
+
+interactive("find-url-from-history-new-buffer",
+            "Find a page from history in a new buffer",
+            "find-url-new-buffer",
+            $browser_object = browser_object_history_url);
+
+define_key(content_buffer_normal_keymap, "h", "find-url-from-history-new-buffer");
+define_key(content_buffer_normal_keymap, "H", "find-url-from-history");
+
+function darken_page (I) {
+    var styles='* { background: black !important; color: grey !important; }'+
+        ':link, :link * { color: #4986dd !important; }'+
+        ':visited, :visited * { color: #d75047 !important; }';
+    var document = I.buffer.document;
+    var newSS=document.createElement('link');
+    newSS.rel='stylesheet';
+    newSS.href='data:text/css,'+escape(styles);
+    document.getElementsByTagName("head")[0].appendChild(newSS);
+}
+
+interactive("darken-page", "Darken the page in an attempt to save your eyes.",
+            darken_page);
+
+define_key(content_buffer_normal_keymap, "C-d", "darken-page");
+
+// webjumps
+// define_webjump("",    "");
+
+define_webjump("g+",    "https://plus.google.com");
+define_webjump("gmail",    "https://gmail.com");
+define_webjump("inbox",    "https://inbox.google.com/u/0/?pli=1");
+define_webjump("hn",    "http://news.ycombinator.com/");
+define_webjump("groups",    "https://groups.google.com/forum/?fromgroups=#!myforums");
+define_webjump("yahoo",    "http://my.yahoo.com/?myHome");
+
+define_webjump("football",    "http://uk.eurosport.yahoo.com/football/");
+define_webjump("bbc-football",    "www.bbc.co.uk/sport/football/fixtures");
+define_webjump("liga",    "http://uk.eurosport.yahoo.com/football/spain/liga/");
+define_webjump("epl",    "http://www.premierleague.com/");
+define_webjump("champions-league",    "http://www.uefa.com/competitions/ucl/index.html");
+define_webjump("foxsports",    "http://tv.foxsportsasia.com/");
+define_webjump("ten-action",    "http://www.tensports.com/action/");
+define_webjump("ten-sports",    "http://www.tensports.com/");
+
+
+define_webjump("arch",    "https://www.archlinux.org/");
+define_webjump("archwiki",    "https://wiki.archlinux.org/");
+define_webjump("archbbs",    "https://bbs.archlinux.org/search.php?action=show_replies");
+define_webjump("emacs-manual",    "http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html");
+define_webjump("zsh-manual",    "http://zsh.sourceforge.net/Doc/Release/zsh_toc.html");
+define_webjump("fasd-git",    "https://github.com/clvv/fasd");
